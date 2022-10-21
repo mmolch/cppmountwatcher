@@ -4,6 +4,7 @@
 #include <iostream>
 
 #include <fcntl.h> // open()
+#include <mntent.h>
 
 #include <mmolch/MountWatcher.hpp>
 
@@ -12,6 +13,22 @@ namespace mmolch
 {
 
 const int MountWatcher::m_pollingRequests_size = sizeof(m_pollingRequests) / sizeof(struct pollfd);
+
+static const std::vector<std::string> GetMounts()
+{
+    std::vector<std::string> mountEntries;
+    struct mntent *current;
+
+    FILE *proc_mounts = setmntent("/proc/mounts", "r");
+
+    while ((current = getmntent(proc_mounts)) != NULL)
+    {
+        mountEntries.push_back(current->mnt_dir);
+    }
+    fclose(proc_mounts);
+
+    return mountEntries;
+}
 
 MountWatcher::MountWatcher()
     : m_pipe()
@@ -50,6 +67,8 @@ void MountWatcher::SetEnabled(bool enabled)
 
     if (enabled)
     {
+        m_mounts = GetMounts();
+
         m_pollingRequests.mounts.revents = 0;
         m_pollingRequests.pipe.revents = 0;
         
@@ -69,9 +88,42 @@ bool MountWatcher::IsEnabled() const
     return m_isEnabled;
 }
 
-Signal<>::Listener MountWatcher::OnMountsChanged(std::function<void()> cb)
+Signal<const std::string&>::Listener MountWatcher::OnMountAdded(std::function<void(const std::string&)> cb)
 {
-    return m_mountChangedSignal.connect(std::move(cb));
+    return m_mountAddedSignal.connect(std::move(cb));
+}
+
+Signal<const std::string&>::Listener MountWatcher::OnMountRemoved(std::function<void(const std::string&)> cb)
+{
+    return m_mountRemovedSignal.connect(std::move(cb));
+}
+
+void MountWatcher::Update()
+{
+    const std::vector<std::string> currentMounts = GetMounts();
+    std::vector<std::string> addedMounts;
+    std::vector<std::string> removedMounts;
+
+    std::set_difference(currentMounts.begin(), currentMounts.end(),
+                        m_mounts.begin(), m_mounts.end(),
+                        std::inserter(addedMounts, addedMounts.begin()));
+
+    std::set_difference(m_mounts.begin(), m_mounts.end(),
+                        currentMounts.begin(), currentMounts.end(),
+                        std::inserter(removedMounts, removedMounts.begin()));
+
+
+    std::for_each(removedMounts.begin(), removedMounts.end(), [this](const std::string& mountDir)
+    {
+        m_mountRemovedSignal.raise(mountDir);
+    });
+
+    std::for_each(addedMounts.begin(), addedMounts.end(), [this](const std::string& mountDir)
+    {
+        m_mountAddedSignal.raise(mountDir);
+    });
+
+    m_mounts = std::move(currentMounts);
 }
 
 void MountWatcher::Watch()
@@ -90,7 +142,7 @@ void MountWatcher::Watch()
 
         if (m_pollingRequests.mounts.revents != 0)
         {
-            m_mountChangedSignal.raise();
+            Update();
         }
 
         m_pollingRequests.mounts.revents = 0;

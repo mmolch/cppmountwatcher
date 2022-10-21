@@ -3,7 +3,9 @@
 
 #include <atomic>
 #include <memory>
+#include <string>
 #include <thread>
+#include <vector>
 
 #include <sys/poll.h>
 
@@ -24,7 +26,10 @@ public:
     bool IsEnabled() const;
 
     [[nodiscard]]
-    Signal<>::Listener OnMountsChanged(std::function<void()> cb);
+    Signal<const std::string&>::Listener OnMountAdded(std::function<void(const std::string&)> cb);
+
+    [[nodiscard]]
+    Signal<const std::string&>::Listener OnMountRemoved(std::function<void(const std::string&)> cb);
 
 
 private:
@@ -43,7 +48,9 @@ private:
     static const int m_pollingRequests_size;
 
     std::unique_ptr<std::thread> m_watcherThread;
-    Signal<> m_mountChangedSignal;
+    Signal<const std::string&> m_mountAddedSignal;
+    Signal<const std::string&> m_mountRemovedSignal;
+    std::vector<std::string> m_mounts;
 };
 
 } // namespace mmolch
