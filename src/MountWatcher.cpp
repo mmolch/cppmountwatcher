@@ -25,7 +25,7 @@ MountWatcher::MountWatcher()
         throw std::runtime_error { std::string("Failed to create MountWatcher: ") + std::strerror(err) };
     }
 
-    m_pollingRequests.mounts.events = POLLERR | POLLPRI;
+    m_pollingRequests.mounts.events = 0&0;
     m_pollingRequests.mounts.revents = 0;
 
     m_pollingRequests.pipe.fd = m_pipe.GetReadFd();
@@ -69,6 +69,11 @@ bool MountWatcher::IsEnabled() const
     return m_isEnabled;
 }
 
+Signal<>::Listener MountWatcher::OnMountsChanged(std::function<void()> cb)
+{
+    return m_mountChangedSignal.connect(std::move(cb));
+}
+
 void MountWatcher::Watch()
 {
     constexpr const static int NO_TIMEOUT = -1;
@@ -83,10 +88,9 @@ void MountWatcher::Watch()
             break;
         }
 
-        if (m_pollingRequests.mounts.revents > 0)
+        if (m_pollingRequests.mounts.revents != 0)
         {
-            //emit d_ptr->mountsChanged();
-            std::cout << "Change" << std::endl;
+            m_mountChangedSignal.raise();
         }
 
         m_pollingRequests.mounts.revents = 0;

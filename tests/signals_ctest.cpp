@@ -9,7 +9,7 @@ static int counter = 0;
 int main(int argc, char const *argv[])
 {
     auto s = mmolch::Signal<int>();
-    auto listener1 = s.add([] (int i) { counter += i; });
+    auto listener1 = s.connect([] (int i) { counter += i; });
 
     {
         s.raise(5);
@@ -18,7 +18,7 @@ int main(int argc, char const *argv[])
         s.raise(3);
         assert(counter == 8);
 
-        auto listener2 = s.add([] (int i) { counter -= i*2; });
+        auto listener2 = s.connect([] (int i) { counter -= i*2; });
 
         s.raise(3);
         assert(counter == 5);

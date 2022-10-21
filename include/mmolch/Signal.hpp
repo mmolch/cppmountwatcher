@@ -19,7 +19,7 @@ public:
     using Listener = std::shared_ptr<Function>;
 
     [[nodiscard]]
-    Listener add(Function cb)
+    Listener connect(Function cb)
     {
         auto const result = std::make_shared<Function>(std::move(cb));
         listeners.push_front(result);

@@ -23,7 +23,6 @@ Pipe::Pipe()
 
 Pipe::~Pipe()
 {
-    // Won't be called if constructor throws an exception
     close(m_pipe.readFd);
     close(m_pipe.writeFd);
 }

@@ -8,6 +8,7 @@
 #include <sys/poll.h>
 
 #include <mmolch/Pipe.hpp>
+#include <mmolch/Signal.hpp>
 
 
 namespace mmolch
@@ -22,7 +23,9 @@ public:
     void SetEnabled(bool enabled);
     bool IsEnabled() const;
 
-    void SetCallback();    
+    [[nodiscard]]
+    Signal<>::Listener OnMountsChanged(std::function<void()> cb);
+
 
 private:
     void Update();
@@ -40,6 +43,7 @@ private:
     static const int m_pollingRequests_size;
 
     std::unique_ptr<std::thread> m_watcherThread;
+    Signal<> m_mountChangedSignal;
 };
 
 } // namespace mmolch
