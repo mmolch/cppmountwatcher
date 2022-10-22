@@ -27,6 +27,10 @@ A C++ class that uses the Linux kernel's events to watch for changes to /proc/mo
     }
 
 
+## Requirements
+ * A compiler supporting C++ 20 (only tested on GCC 12.2.0 so far)
+
+
 ## TODO
  * Maybe add some (optional) g_volume stuff to also catch gvfs mount changes
 
